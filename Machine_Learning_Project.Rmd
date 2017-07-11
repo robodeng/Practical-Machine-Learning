@@ -25,9 +25,13 @@ More information is available from the website here: http://groupware.les.inf.pu
 Data Agenda:
 
 -Load Data
+
 -Clean Data
+
 -Learn
+
 -Predict
+
 
 The training data for this project are available here:
 https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
