@@ -5,7 +5,7 @@ date: "7/11/2017"
 output: pdf_document
 ---
 
-```{r, error = false, message = false}
+```{r, error = FALSE, message = FALSE}
 library(caret)
 library(randomForest)
 library(rattle)
