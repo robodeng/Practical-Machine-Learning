@@ -1,23 +1,3 @@
-# Practical-Machine-Learning
-Coursera JHU Data Science Track
-
----
-title: "Practical Machine Learning"
-author: "Robert Deng"
-date: "7/11/2017"
-output:
-  html_document: default
-  pdf_document: default
----
-
-```{r, error = FALSE, message = FALSE}
-library(caret)
-library(randomForest)
-library(rattle)
-library(rpart)
-library(rpart.plot)
-```
-
 Background
 
 Wearable technology (Fitbit, Nike FuelBand, and Jawbone Up) has made it possible to collect data about personal activity. People are measuring their own volume of activity, but rarely are they measuring quality. Training data was collected by participants to perform barbell lifts correctly and incorrectly in 5 different ways. Using data from accelerometers, the reseach question of interest is:
@@ -36,6 +16,14 @@ Data Agenda:
 -Learn
 
 -Predict
+
+```{r, error = FALSE, message = FALSE}
+library(caret)
+library(randomForest)
+library(rattle)
+library(rpart)
+library(rpart.plot)
+```
 
 
 The training data for this project are available here:
