@@ -1,0 +1,137 @@
+# Practical-Machine-Learning
+Coursera JHU Data Science Track
+
+---
+title: "Practical Machine Learning"
+author: "Robert Deng"
+date: "7/11/2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r, error = FALSE, message = FALSE}
+library(caret)
+library(randomForest)
+library(rattle)
+library(rpart)
+library(rpart.plot)
+```
+
+Background
+
+Wearable technology (Fitbit, Nike FuelBand, and Jawbone Up) has made it possible to collect data about personal activity. People are measuring their own volume of activity, but rarely are they measuring quality. Training data was collected by participants to perform barbell lifts correctly and incorrectly in 5 different ways. Using data from accelerometers, the reseach question of interest is:
+
+>*Can you learn and properly classify correct and incorrect workout form?*
+
+More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+
+Data Agenda:
+
+-Load Data
+
+-Clean Data
+
+-Learn
+
+-Predict
+
+
+The training data for this project are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+Most of the NA / #DIV/0 cleaning can be done within the read.csv funtion
+
+```{r}
+
+training <- read.csv('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv', 
+                  na.strings=c('#DIV/0!', '', 'NA') , stringsAsFactors = T)
+
+testing <- read.csv('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv', 
+                  na.strings=c('#DIV/0!', '', 'NA') ,stringsAsFactors = T)
+
+```
+
+Cross validation used to create a standard 60% / 40% split on the training data set. The testing data doesn't have a classe column to compare results with and is used in the final model evaluation phase.
+
+```{r}
+inTrain <- createDataPartition(training$classe, p=0.6, list=FALSE)
+myTraining <- training[inTrain,]
+myTesting <- training[-inTrain,]
+dim(myTraining); dim(myTesting)
+```
+
+#Data cleaning
+
+Near zero variance removes the columns with very little variance and columns with more than 70% NAs are removed. This is to keep the columns with more meaningful data. Also the X, id column 1 is removed. 
+
+```{r}
+#Near Zero Variance
+nzv <- nearZeroVar(myTraining, saveMetrics=TRUE)
+myTraining <- myTraining[nzv$nzv==FALSE]
+myTesting <- myTesting[nzv$nzv==FALSE]
+myTraining <- myTraining[-1]
+myTesting <- myTesting[-1]
+testing <- testing[-1]
+
+#More than 70% NAs
+myTraining <- myTraining[, -which(colMeans(is.na(myTraining)) > 0.7)]
+myTesting <- myTesting[, -which(colMeans(is.na(myTesting)) > 0.7)]
+```
+
+The myTraining and final testing datasets need the same data classes and features coerced together for the RandomForest model. I have a hard time figuring out why, but the RF model works on an appended testing set with 1 row from myTraining. Something about the familiarity with the training data.
+
+```{r}
+#Match columns between myTraining and testing
+col_match <- colnames(myTraining)[-58]
+testing2 <- testing[col_match]
+
+#Coerce the same datatypes for both testing and myTraining datasets for randomForest
+for (i in 1:length(testing2) ) {
+  for(j in 1:length(myTraining)) {
+    if( length( grep(names(myTraining[i]), names(testing2)[j]) ) ==1)  {
+      class(testing2[j]) <- class(myTraining[i])
+    }
+  }
+}
+
+#Rbind 1 from of myTraining to testing2
+testing2 <- rbind(myTraining[2, -58] , testing2)
+```
+
+Now the fun part. First train for the rpart model using myTraining, then predict using myTesting.
+```{r}
+set.seed(98765)
+model1 <- rpart(classe ~ ., data=myTraining, method="class")
+fancyRpartPlot(model1)
+```
+
+*Expected out of sample error* is ~12.66% (1-0.8734) with most of the misclassifications on D.
+
+```{r}
+predResults1 <- predict(model1, myTesting, type = "class")
+confusionMatrix(predResults1, myTesting$classe)
+```
+
+To validate, RandomForest yielded an expected 0.2% (1-0.998) out of sample error rate. This outperformed the rpart model but could be slightly overfitting. Cross-validation here is done with K-folds = 5 such that every piece of data gets built into the model for less bias. RandomForest does a better job selecting the most important features via gini index and is more resilient to outliers.
+
+```{r}
+model2 <- randomForest(classe ~. , data=myTraining, trControl = trainControl(method = "cv", 5))
+predResults2 <- predict(model2, myTesting, type = "class")
+confusionMatrix(predResults2, myTesting$classe)
+```
+
+Now for the final testing rounds:
+```{r}
+predFinal1 <- predict(model1, testing2, type = "class")
+predFinal1
+
+#Ignore the 31 (stitched from myTraining) in the model
+predFinal2 <- predict(model2, testing2, type = "class")
+predFinal2 <- predFinal2[-4]
+predFinal2
+```
